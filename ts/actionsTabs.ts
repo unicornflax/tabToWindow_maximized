@@ -70,7 +70,7 @@ export const tabToWindow = async (
 
     const options = await getOptions();
 
-    const isFullscreen = options.get("copyFullscreen") && currentWindow.state === "fullscreen";
+    const copyState = options.get("copyState");
     const isFocused = options.get("focus") === "new";
 
     // (maybe) move and resize original window
@@ -78,7 +78,7 @@ export const tabToWindow = async (
     const destroyingOriginalWindow = tabs.length === 1;
     if (
       options.get("resizeOriginal") &&
-      !isFullscreen &&
+      !copyState &&
       !destroyingOriginalWindow &&
       !moveToNextDisplay
     ) {
@@ -125,7 +125,8 @@ export const tabToWindow = async (
       newWindowType,
       windowBounds,
       isFocused,
-      currentWindow.state,
+      copyState,
+      currentWindow.state
     );
 
     if (newWin.id !== undefined) {
@@ -136,14 +137,14 @@ export const tabToWindow = async (
           // move all tabs at once
           const moveIndex = 1;
           const movedTabs = await moveTabs(otherTabs, newWin.id, moveIndex);
-
+  
           // highlight tabs in new window
           const tabPromises = movedTabs.map((tab) => {
             return new Promise<chrome.tabs.Tab>((resolve) => {
               chrome.tabs.update(tab.id!, { highlighted: true }, () => resolve(tab));
             });
           });
-
+  
           await Promise.all(tabPromises);
         } else if (newWindowType === "popup") {
           // can't move tabs to a popup window, so create individual ones
@@ -153,12 +154,14 @@ export const tabToWindow = async (
               newWindowType,
               getWindowBounds(newWin),
               isFocused,
-              currentWindow.state,
+              copyState,
+              currentWindow.state
             );
           });
           await Promise.all(tabPromises);
         }
       }
+      
     }
 
     // focus on original window if specified, and it still exists
